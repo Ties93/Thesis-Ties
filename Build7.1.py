@@ -71,34 +71,43 @@ def create_model(Qark, Qolst, H_NS, timestep = 3600, h0_nzk = -0.4, hmax_nzk = -
     #mass balance
     def MassBalance_nzk(model, t):
         if t==0:
-            return model.S_nzk[t] == S0_nzk
-        return model.S_nzk[t] == model.S_nzk[t-1] + dt*(Qark[t-1] + model.Qor[t-1] - model.Qijm_s[t-1] - model.Qijm_p[t-1])
+            return model.h_nzk[t] == h0_nzk
+        return model.h_nzk[t] == model.h_nzk[t-1] + dt/A_nzk * (Qark[t-1] + model.Qor[t-1] - model.Qijm_s[t-1] - model.Qijm_p[t-1])
+#        if t==0:
+#            return model.S_nzk[t] == S0_nzk
+#        return model.S_nzk[t] == model.S_nzk[t-1] + dt*(Qark[t-1] + model.Qor[t-1] - model.Qijm_s[t-1] - model.Qijm_p[t-1])
     model.MBnzk = Constraint(model.T, rule=MassBalance_nzk)
     
     def MassBalance_mar(model, t):
         if t==0:
-            return model.S_mar[t] == S0_mar
-        return model.S_mar[t] == model.S_mar[t-1] + dt*(model.Qhout[t-1] - model.Qor[t-1] - model.Qkorn[t-1])
+            return model.h_mar[t] == h0_mar
+        return model.h_mar[t] == model.h_mar[t-1] + dt/A_mar * (model.Qhout[t-1] - model.Qor[t-1] - model.Qkorn[t-1])
+#        if t==0:
+#            return model.S_mar[t] == S0_mar
+#        return model.S_mar[t] == model.S_mar[t-1] + dt*(model.Qhout[t-1] - model.Qor[t-1] - model.Qkorn[t-1])
     model.MBmar = Constraint(model.T, rule=MassBalance_mar)
     
     def MassBalance_ijs(model, t):
         if t==0:
-            return model.S_ijs[t] == S0_ijs
-        return model.S_ijs[t] == model.S_ijs[t-1] + dt*(Qolst[t-1] - model.Qhout[t-1] - model.Qden[t-1] + model.Qkorn[t-1])
+            return model.h_ijs[t] == h0_ijs
+        return model.h_ijs[t] == model.h_ijs[t-1] + dt/A_ijs * (Qolst[t-1] - model.Qhout[t-1] - model.Qden[t-1] + model.Qkorn[t-1])
+#        if t==0:
+#            return model.S_ijs[t] == S0_ijs
+#        return model.S_ijs[t] == model.S_ijs[t-1] + dt*(Qolst[t-1] - model.Qhout[t-1] - model.Qden[t-1] + model.Qkorn[t-1])
     model.MBijs = Constraint(model.T, rule=MassBalance_ijs)
     
     #relation storage and water level
-    def StorageWL_nzk(model,t):
-        return model.h_nzk[t] == model.S_nzk[t]/A_nzk + Hb_nzk
-    model.WLnzk = Constraint(model.T, rule=StorageWL_nzk)
-    
-    def StorageWL_mar(model,t):
-        return model.h_mar[t] == model.S_mar[t]/A_mar + Hb_mar
-    model.WLmar = Constraint(model.T, rule=StorageWL_mar)
-    
-    def StorageWL_ijs(model,t):
-        return model.h_ijs[t] == model.S_ijs[t]/A_ijs + Hb_ijs
-    model.WLijs = Constraint(model.T, rule=StorageWL_ijs)
+#    def StorageWL_nzk(model,t):
+#        return model.h_nzk[t] == model.S_nzk[t]/A_nzk + Hb_nzk
+#    model.WLnzk = Constraint(model.T, rule=StorageWL_nzk)
+#    
+#    def StorageWL_mar(model,t):
+#        return model.h_mar[t] == model.S_mar[t]/A_mar + Hb_mar
+#    model.WLmar = Constraint(model.T, rule=StorageWL_mar)
+#    
+#    def StorageWL_ijs(model,t):
+#        return model.h_ijs[t] == model.S_ijs[t]/A_ijs + Hb_ijs
+#    model.WLijs = Constraint(model.T, rule=StorageWL_ijs)
     
     #energy consumption of ijmuiden
     def EnergyConsumption(model, t):
@@ -244,9 +253,9 @@ for i in ind1:
 #Q.index = ind
 #print(ind)
 ind2 = np.arange(0,25,1)
-Qark1 = pd.DataFrame(data = {'Q': Qa})
+Qark1 = pd.DataFrame(data = {'Q': Qa})*10
 Qark1.index = ind2
-Qolst1 = pd.DataFrame(data = {'Q': Qo})
+Qolst1 = pd.DataFrame(data = {'Q': Qo})*10
 Qolst1.index = ind2
 Hns1 = pd.DataFrame(data = {'H': H})
 Hns1.index = ind2
@@ -396,12 +405,12 @@ ax2.legend(loc=1)
 #%%
 #plot constraints over time
 
-def MB_calc(S, Qin, Qout, A):
+def MB_calc(h, Qin, Qout, A):
     c1 = []
     c2 = []
-    for i in range(1,len(S)):
-        c1.append(S[i]/A)
-        c2.append(S[i-1]/A + 3600*(Qin[i-1] - Qout[i-1])/A)
+    for i in range(1,len(h)):
+        c1.append(h[i])
+        c2.append(h[i-1] + 3600/A*(Qin[i-1] - Qout[i-1]))
         #c2.append(S[i] - S[i-1])
     return c1, c2
 
@@ -432,12 +441,12 @@ def h_calc(h, S, A):
 
 Qinnzk = Qark1.Q + Qor
 
-MB_nzk1, MB_nzk2 = MB_calc(Snzk, Qark1.Q + Qor, Qijms + Qijmp, 28.6e06)
-MB_mar1, MB_mar2 = MB_calc(Smar, Qhout, Qkorn + Qor, 700e06)
-MB_ijs1, MB_ijs2 = MB_calc(Sijs, Qolst1.Q + Qkorn, Qden + Qhout, 1133e06)
-H_nzk = h_calc(hnzk, Snzk, 28.6e06)
-H_mar = h_calc(hmar, Smar, 700e06)
-H_ijs = h_calc(hijs, Sijs, 1133e06)
+MB_nzk1, MB_nzk2 = MB_calc(hnzk, Qark1.Q + Qor, Qijms + Qijmp, 28.6e06)
+MB_mar1, MB_mar2 = MB_calc(hmar, Qhout, Qkorn + Qor, 700e06)
+MB_ijs1, MB_ijs2 = MB_calc(hijs, Qolst1.Q + Qkorn, Qden + Qhout, 1133e06)
+#H_nzk = h_calc(hnzk, Snzk, 28.6e06)
+#H_mar = h_calc(hmar, Smar, 700e06)
+#H_ijs = h_calc(hijs, Sijs, 1133e06)
 
 
 plt.figure()
@@ -543,8 +552,11 @@ plt.title('Slack Den Oever')
 
 #%%
 #instance.pprint()
-
-
+x = 1
+for n in range(22):
+    x = x * (365-n)/365
+    print(x)
+    
 
 
 #%%
